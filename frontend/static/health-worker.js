@@ -10,6 +10,7 @@ const state = {
   isRecording: false,
   recordTimer: null,
   recordSeconds: 0,
+  gpsError: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -47,7 +48,13 @@ function setEventType(type) {
 }
 
 function updateOnlineStatus() {
-  $("connectionStatus").textContent = navigator.onLine ? "Online" : "Offline";
+  if (state.gpsError) {
+    $("connectionStatus").textContent = "No GPS";
+    $("connectionStatus").className = "status-chip no-gps";
+  } else {
+    $("connectionStatus").textContent = navigator.onLine ? "Online" : "Offline";
+    $("connectionStatus").className = navigator.onLine ? "status-chip" : "status-chip offline";
+  }
 }
 
 async function requestPermissions() {
@@ -73,6 +80,8 @@ async function updateLocation() {
   if (!("geolocation" in navigator)) {
     badge.textContent = "No GPS";
     label.textContent = "Unavailable";
+    state.gpsError = true;
+    updateOnlineStatus();
     return;
   }
 
@@ -85,11 +94,15 @@ async function updateLocation() {
         badge.textContent = "Location locked";
         badge.classList.remove("muted");
         label.textContent = coords;
+        state.gpsError = false;
+        updateOnlineStatus();
         resolve();
       },
       () => {
         badge.textContent = "GPS blocked";
         label.textContent = "Not shared";
+        state.gpsError = true;
+        updateOnlineStatus();
         resolve();
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -289,6 +302,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("micBtn").addEventListener("click", toggleRecording);
 
   updateOnlineStatus();
+  updateLocation();
   window.addEventListener("online", updateOnlineStatus);
   window.addEventListener("offline", updateOnlineStatus);
 });

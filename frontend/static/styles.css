@@ -69,11 +69,15 @@ button {
 
 .eyebrow {
   margin-bottom: 8px;
-  color: var(--accent);
+  color: var(--brand);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.eyebrow.danger {
+  color: var(--danger);
 }
 
 .saas-hero h1,
@@ -933,5 +937,85 @@ button:disabled {
   border-top: 1px solid var(--line);
   padding-top: 16px;
   margin-top: 8px;
+}
+
+/* Landing Page Header Navbar */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--brand);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--ink);
+}
+
+.nav-btn {
+  padding: 0 16px !important;
+  min-height: 38px !important;
+  font-size: 0.9rem !important;
+}
+
+/* Metric Card Colors */
+.metric-card span.events-label {
+  color: var(--accent);
+}
+
+.metric-card span.verified-label {
+  color: var(--brand);
+}
+
+.metric-card span.review-label {
+  color: var(--warn);
+}
+
+.metric-card span.flagged-label {
+  color: var(--danger);
+}
+
+/* No GPS Status Chip */
+.status-chip.no-gps {
+  color: var(--danger);
+  background: #fee4e2;
+  border-color: #fecdca;
 }
 

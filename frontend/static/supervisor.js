@@ -19,17 +19,17 @@ function formatDateTime(value) {
 function renderMetrics(metrics) {
   const grid = document.getElementById("metricGrid");
   const cards = [
-    ["Events", metrics.total_events],
-    ["Verified", metrics.verified_count],
-    ["Review", metrics.review_count],
-    ["Flagged", metrics.flagged_count],
+    ["Events", metrics.total_events, "events-label"],
+    ["Verified", metrics.verified_count, "verified-label"],
+    ["Review", metrics.review_count, "review-label"],
+    ["Flagged", metrics.flagged_count, "flagged-label"],
   ];
 
   grid.innerHTML = cards
     .map(
-      ([label, value]) => `
+      ([label, value, labelClass]) => `
         <article class="metric-card">
-          <span>${label}</span>
+          <span class="${labelClass}">${label}</span>
           <strong>${value}</strong>
         </article>
       `
