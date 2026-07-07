@@ -1,0 +1,17 @@
+{
+  "name": "Rural Attendance Agent",
+  "short_name": "AttendanceAgent",
+  "start_url": "/health-worker",
+  "display": "standalone",
+  "background_color": "#f3ede2",
+  "theme_color": "#0b6e4f",
+  "description": "Offline-first health worker attendance with AI verification and supervisor mission control.",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

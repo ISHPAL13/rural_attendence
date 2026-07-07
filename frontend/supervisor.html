@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Supervisor Console</title>
+    <link rel="manifest" href="/static/manifest.webmanifest" />
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="supervisor-body">
+    <main class="saas-shell">
+      <section class="saas-header">
+        <div>
+          <p class="eyebrow">Supervisor panel</p>
+          <h1>Attendance operations</h1>
+        </div>
+        <div class="header-actions">
+          <a href="/" class="secondary-button link-button">Overview</a>
+          <button id="seedSpoofButton" class="danger-button" type="button">Add flagged demo</button>
+        </div>
+      </section>
+
+      <section class="metric-grid" id="metricGrid"></section>
+
+      <section class="saas-grid">
+        <div class="map-card">
+          <div class="panel-header">
+            <h2>Field map</h2>
+            <span class="badge">Live</span>
+          </div>
+          <div id="map"></div>
+        </div>
+
+        <aside class="alerts-card">
+          <div class="panel-header">
+            <h2>AI alerts</h2>
+            <span class="badge alert">Review</span>
+          </div>
+          <div id="alertsList" class="alerts-list"></div>
+        </aside>
+      </section>
+
+      <section class="table-card">
+        <div class="panel-header">
+          <h2>Attendance feed</h2>
+          <span class="badge muted">5s refresh</span>
+        </div>
+        <div id="checkInTable" class="attendance-table"></div>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+      defer
+    ></script>
+    <script src="/static/app.js" defer></script>
+    <script src="/static/supervisor.js" defer></script>
+  </body>
+</html>

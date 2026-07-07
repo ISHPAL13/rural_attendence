@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance Capture</title>
+    <link rel="manifest" href="/static/manifest.webmanifest" />
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="worker-body">
+    <main class="worker-app-shell">
+      <section class="worker-hero">
+        <a href="/" class="top-link">Overview</a>
+        <div>
+          <p class="eyebrow">Attendance</p>
+          <h1>Capture shift proof</h1>
+        </div>
+        <span id="connectionStatus" class="status-chip">Ready</span>
+      </section>
+
+      <section class="worker-card worker-card-tight">
+        <div class="segmented-control" id="eventTypeControl">
+          <button class="segment active" data-type="check_in" type="button">Check in</button>
+          <button class="segment" data-type="check_out" type="button">Check out</button>
+        </div>
+      </section>
+
+      <section class="worker-card">
+        <div class="form-grid">
+          <label class="field">
+            <span>Worker</span>
+            <input id="workerName" type="text" value="Asha Devi" />
+          </label>
+          <label class="field">
+            <span>Facility</span>
+            <input id="facilityName" type="text" value="Kotra Village Clinic" />
+          </label>
+        </div>
+      </section>
+
+      <section class="worker-card">
+        <div class="panel-header">
+          <h2>Photo evidence</h2>
+          <span id="locationBadge" class="badge muted">Location pending</span>
+        </div>
+        <video id="cameraPreview" autoplay playsinline muted></video>
+        <canvas id="photoCanvas" hidden></canvas>
+        <img id="photoPreview" alt="Attendance proof preview" class="photo-preview hidden" />
+        <div class="action-row">
+          <button id="requestPermissions" class="secondary-button" type="button">Enable camera</button>
+          <button id="snapPhoto" class="primary-button" type="button" disabled>Capture photo</button>
+        </div>
+      </section>
+
+      <section class="worker-card">
+        <div class="meta-grid">
+          <article class="meta-item">
+            <span>Event time</span>
+            <strong id="eventTimeLabel">Not captured</strong>
+          </article>
+          <article class="meta-item">
+            <span>Location</span>
+            <strong id="locationLabel">Waiting</strong>
+          </article>
+        </div>
+        <label class="field">
+          <span class="field-header">
+            <span>Notes</span>
+            <button id="micBtn" class="mic-button" type="button" title="Record voice note">🎙️ Record note</button>
+          </span>
+          <textarea id="noteInput" rows="3" placeholder="Optional note (type or tap Record to speak)"></textarea>
+        </label>
+        <button id="submitCheckIn" class="submit-button" type="button" disabled>Submit attendance</button>
+      </section>
+
+      <section id="resultCard" class="worker-card hidden"></section>
+    </main>
+
+    <script src="/static/app.js" defer></script>
+    <script src="/static/health-worker.js" defer></script>
+  </body>
+</html>
