@@ -27,34 +27,93 @@
         </div>
       </section>
 
-      <section class="metric-grid" id="metricGrid"></section>
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="dashboard">Dashboard Feed</button>
+        <button class="tab-btn" data-tab="employees">Manage Workers</button>
+      </div>
 
-      <section class="saas-grid">
-        <div class="map-card">
-          <div class="panel-header">
-            <h2>Field map</h2>
-            <span class="badge">Live</span>
+      <!-- Dashboard Tab Content -->
+      <div id="dashboardTab" class="tab-content active">
+        <section class="metric-grid" id="metricGrid"></section>
+
+        <section class="saas-grid">
+          <div class="map-card">
+            <div class="panel-header">
+              <h2>Field map</h2>
+              <span class="badge">Live</span>
+            </div>
+            <div id="map"></div>
           </div>
-          <div id="map"></div>
-        </div>
 
-        <aside class="alerts-card">
+          <aside class="alerts-card">
+            <div class="panel-header">
+              <h2>AI alerts</h2>
+              <span class="badge alert">Review</span>
+            </div>
+            <div id="alertsList" class="alerts-list"></div>
+          </aside>
+        </section>
+
+        <section class="table-card">
           <div class="panel-header">
-            <h2>AI alerts</h2>
-            <span class="badge alert">Review</span>
+            <h2>Attendance feed</h2>
+            <span class="badge muted">5s refresh</span>
           </div>
-          <div id="alertsList" class="alerts-list"></div>
-        </aside>
-      </section>
+          <div id="checkInTable" class="attendance-table"></div>
+        </section>
+      </div>
 
-      <section class="table-card">
-        <div class="panel-header">
-          <h2>Attendance feed</h2>
-          <span class="badge muted">5s refresh</span>
-        </div>
-        <div id="checkInTable" class="attendance-table"></div>
-      </section>
+      <!-- Employees Tab Content -->
+      <div id="employeesTab" class="tab-content">
+        <section class="table-card">
+          <div class="employees-header">
+            <div>
+              <h2>Registered Workers</h2>
+              <p class="subtitle text-muted">Profiles and photos used by Gemini AI to verify identity during check-ins</p>
+            </div>
+            <button id="addEmployeeBtn" class="primary-button" type="button">
+              <span>➕</span> Add Worker
+            </button>
+          </div>
+          <div id="employeesGrid" class="employees-grid"></div>
+        </section>
+      </div>
     </main>
+
+    <!-- Register Employee Modal -->
+    <div id="employeeModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Register New Worker</h2>
+          <button id="closeModalBtn" class="close-btn" type="button">&times;</button>
+        </div>
+        <form id="employeeForm" class="modal-form">
+          <div class="form-group">
+            <label for="empName">Full Name *</label>
+            <input type="text" id="empName" name="name" placeholder="e.g., Asha Devi" required />
+          </div>
+          <div class="form-group">
+            <label for="empFacility">Facility Location *</label>
+            <input type="text" id="empFacility" name="facility_name" placeholder="e.g., Kotra Village Clinic" required />
+          </div>
+          <div class="form-group">
+            <label for="empHours">Shift Work Hours *</label>
+            <input type="text" id="empHours" name="work_hours" placeholder="e.g., 09:00 - 17:00" required />
+          </div>
+          <div class="form-group">
+            <label for="empPhoto">Profile Photo (for AI Face Match) *</label>
+            <div class="file-upload-wrapper">
+              <input type="file" id="empPhoto" name="photo" accept="image/*" required />
+              <div class="file-upload-preview" id="photoPreviewText">Click to select photo...</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="cancelBtn" class="secondary-button">Cancel</button>
+            <button type="submit" class="primary-button">Register Worker</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

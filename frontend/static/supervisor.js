@@ -125,12 +125,21 @@ function renderMarkers(records) {
 }
 
 async function refreshDashboard() {
-  const response = await fetch("/api/dashboard");
-  const payload = await response.json();
-  renderMetrics(payload.metrics);
-  renderAlerts(payload.alerts);
-  renderTable(payload.records);
-  renderMarkers(payload.records);
+  // Only auto-refresh if dashboard feed tab is active
+  const dashboardTab = document.getElementById("dashboardTab");
+  if (!dashboardTab.classList.contains("active")) {
+    return;
+  }
+  try {
+    const response = await fetch("/api/dashboard");
+    const payload = await response.json();
+    renderMetrics(payload.metrics);
+    renderAlerts(payload.alerts);
+    renderTable(payload.records);
+    renderMarkers(payload.records);
+  } catch (err) {
+    console.error("Dashboard refresh error:", err);
+  }
 }
 
 async function triggerSpoofDemo() {
@@ -138,8 +147,134 @@ async function triggerSpoofDemo() {
   await refreshDashboard();
 }
 
+async function loadEmployees() {
+  try {
+    const response = await fetch("/api/employees");
+    const payload = await response.json();
+    const grid = document.getElementById("employeesGrid");
+    
+    if (!payload.employees.length) {
+      grid.innerHTML = "<p class='empty-copy'>No registered workers found.</p>";
+      return;
+    }
+    
+    grid.innerHTML = payload.employees
+      .map(emp => {
+        const initials = emp.name.split(" ").map(n => n[0]).join("").slice(0, 2);
+        const photoHtml = emp.photo_url 
+          ? `<img class="employee-photo" src="${emp.photo_url}" alt="${emp.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />`
+          : '';
+          
+        return `
+          <div class="employee-card">
+            <div class="employee-avatar-container">
+              ${photoHtml}
+              <div class="employee-avatar-placeholder" style="${emp.photo_url ? 'display:none;' : 'display:flex;'}">${initials}</div>
+            </div>
+            <div class="employee-details">
+              <h3>${emp.name}</h3>
+              <div class="employee-meta-info">
+                <span class="label">Location:</span> ${emp.facility_name}
+              </div>
+              <div class="employee-meta-info">
+                <span class="label">Hours:</span> ${emp.work_hours}
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  } catch (err) {
+    console.error("Error loading employees:", err);
+  }
+}
+
+function initTabs() {
+  const tabs = document.querySelectorAll(".tab-btn");
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      btn.classList.add("active");
+      
+      const target = btn.dataset.tab;
+      document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
+      document.getElementById(`${target}Tab`).classList.add("active");
+      
+      if (target === "employees") {
+        loadEmployees();
+      } else {
+        refreshDashboard();
+      }
+    });
+  });
+}
+
+function initModal() {
+  const modal = document.getElementById("employeeModal");
+  const openBtn = document.getElementById("addEmployeeBtn");
+  const closeBtn = document.getElementById("closeModalBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const fileInput = document.getElementById("empPhoto");
+  const previewText = document.getElementById("photoPreviewText");
+  const form = document.getElementById("employeeForm");
+  
+  if (!modal || !openBtn) return;
+
+  openBtn.addEventListener("click", () => {
+    modal.classList.add("active");
+  });
+  
+  const closeModal = () => {
+    modal.classList.remove("active");
+    form.reset();
+    previewText.textContent = "Click to select photo...";
+  };
+  
+  closeBtn.addEventListener("click", closeModal);
+  cancelBtn.addEventListener("click", closeModal);
+  
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length) {
+      previewText.textContent = e.target.files[0].name;
+    } else {
+      previewText.textContent = "Click to select photo...";
+    }
+  });
+  
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    
+    const submitBtn = form.querySelector("button[type='submit']");
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = "Registering...";
+    submitBtn.disabled = true;
+    
+    try {
+      const response = await fetch("/api/employees", {
+        method: "POST",
+        body: formData
+      });
+      if (response.ok) {
+        closeModal();
+        loadEmployees();
+      } else {
+        alert("Failed to register employee.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error submitting registration.");
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("seedSpoofButton").addEventListener("click", triggerSpoofDemo);
+  initTabs();
+  initModal();
   await refreshDashboard();
   setInterval(refreshDashboard, 5000);
 });

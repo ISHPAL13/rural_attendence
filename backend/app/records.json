@@ -1,0 +1,72 @@
+[
+  {
+    "id": "6f605d98-a050-45fb-b170-562a901ef714",
+    "worker_name": "Asha Devi",
+    "facility_name": "Kotra Village Clinic",
+    "event_type": "check_in",
+    "event_time": "2026-07-07T09:24:59.342Z",
+    "latitude": 19.119114608924896,
+    "longitude": 72.8903243321055,
+    "photo_uploaded": true,
+    "verification_status": "flagged",
+    "confidence": 0.95,
+    "risk_score": 95,
+    "ai_result": "The person in the check-in photo is identified as male, which contradicts the worker's registered name 'Asha Devi', typically a female name. The photo's backdrop appears to be an urban office environment (visible cubicles, modern ceiling, office chairs), inconsistent with a 'rural health worker' at 'Kotra Village Clinic'. Furthermore, the provided GPS coordinates correspond to an urban location, not a rural clinic. There is no registered profile photo for direct facial comparison.",
+    "roster_suggestion": "Escalate to supervisor for immediate review and investigation into potential identity fraud or misrepresentation. Require concrete evidence for validation.",
+    "note": "",
+    "translated_note": "",
+    "alert": {
+      "level": "CRITICAL",
+      "title": "Major Identity & Context Mismatch",
+      "detail": "The individual in the photo is male, conflicting with the worker's female name (Asha Devi). The location (GPS) and visual backdrop of the photo are clearly an urban office, not the expected rural clinic setting. This highly suspicious event requires urgent manual intervention.",
+      "recommendation": "Escalate to supervisor for immediate review and investigation into potential identity fraud or misrepresentation. Require concrete evidence for validation.",
+      "created_at": "2026-07-07T09:25:13.347187+00:00"
+    },
+    "raw_signals": {
+      "provider": "gemini",
+      "used_photo": true
+    }
+  },
+  {
+    "id": "seed-record-1",
+    "worker_name": "Asha Devi",
+    "facility_name": "Kotra Village Clinic",
+    "event_type": "check_in",
+    "event_time": "2026-07-07T03:20:00+00:00",
+    "latitude": 23.2599,
+    "longitude": 77.4126,
+    "photo_uploaded": false,
+    "verification_status": "verified",
+    "confidence": 0.95,
+    "risk_score": 11,
+    "ai_result": "Face visibility, clinic backdrop, location, and arrival time align with a normal start-of-shift check-in.",
+    "roster_suggestion": "No action required.",
+    "note": "On duty",
+    "translated_note": "On duty",
+    "alert": null,
+    "raw_signals": {
+      "provider": "demo"
+    }
+  },
+  {
+    "id": "seed-record-2",
+    "worker_name": "Meena Kumari",
+    "facility_name": "Ward 7 Outreach Point",
+    "event_type": "check_out",
+    "event_time": "2026-07-07T11:35:00+00:00",
+    "latitude": 23.2722,
+    "longitude": 77.4331,
+    "photo_uploaded": false,
+    "verification_status": "review",
+    "confidence": 0.68,
+    "risk_score": 42,
+    "ai_result": "The photo and location are plausible, but the late check-out pattern needs supervisor confirmation.",
+    "roster_suggestion": "Review field completion before closing the shift.",
+    "note": "Done with shift",
+    "translated_note": "Done with shift",
+    "alert": null,
+    "raw_signals": {
+      "provider": "demo"
+    }
+  }
+]

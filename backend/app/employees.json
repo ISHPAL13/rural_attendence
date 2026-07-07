@@ -1,0 +1,16 @@
+[
+  {
+    "id": "asha-devi-id",
+    "name": "Asha Devi",
+    "facility_name": "Kotra Village Clinic",
+    "photo_url": "",
+    "work_hours": "09:00 - 17:00"
+  },
+  {
+    "id": "meena-kumari-id",
+    "name": "Meena Kumari",
+    "facility_name": "Ward 7 Outreach Point",
+    "photo_url": "",
+    "work_hours": "08:00 - 16:00"
+  }
+]

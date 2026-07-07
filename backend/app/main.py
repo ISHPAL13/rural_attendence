@@ -13,6 +13,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from . import db
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -63,61 +64,7 @@ class AttendanceRecord:
     raw_signals: dict[str, Any] = field(default_factory=dict)
 
 
-class DemoStore:
-    def __init__(self) -> None:
-        self.records: list[AttendanceRecord] = []
-        self._seed()
-
-    def _seed(self) -> None:
-        if self.records:
-            return
-
-        today = datetime.now(timezone.utc)
-        self.records.extend(
-            [
-                AttendanceRecord(
-                    id=str(uuid4()),
-                    worker_name="Asha Devi",
-                    facility_name="Kotra Village Clinic",
-                    event_type="check_in",
-                    event_time=today.replace(hour=3, minute=20, second=0, microsecond=0).isoformat(),
-                    latitude=23.2599,
-                    longitude=77.4126,
-                    photo_uploaded=True,
-                    verification_status="verified",
-                    confidence=0.95,
-                    risk_score=11,
-                    ai_result="Face visibility, clinic backdrop, location, and arrival time align with a normal start-of-shift check-in.",
-                    roster_suggestion="No action required.",
-                    raw_signals={"provider": "demo"},
-                ),
-                AttendanceRecord(
-                    id=str(uuid4()),
-                    worker_name="Meena Kumari",
-                    facility_name="Ward 7 Outreach Point",
-                    event_type="check_out",
-                    event_time=today.replace(hour=11, minute=35, second=0, microsecond=0).isoformat(),
-                    latitude=23.2722,
-                    longitude=77.4331,
-                    photo_uploaded=True,
-                    verification_status="review",
-                    confidence=0.68,
-                    risk_score=42,
-                    ai_result="The photo and location are plausible, but the late check-out pattern needs supervisor confirmation.",
-                    roster_suggestion="Review field completion before closing the shift.",
-                    raw_signals={"provider": "demo"},
-                ),
-            ]
-        )
-
-    def add(self, record: AttendanceRecord) -> None:
-        self.records.insert(0, record)
-
-    def list(self) -> list[AttendanceRecord]:
-        return self.records
-
-
-store = DemoStore()
+# DemoStore has been replaced by db.py persistence.
 
 
 class GeminiVerifier:
@@ -137,6 +84,28 @@ class GeminiVerifier:
         note: str,
         photo: UploadFile | None,
     ) -> dict[str, Any]:
+        # Look up employee
+        employees = db.load_employees()
+        employee = next(
+            (emp for emp in employees if emp["name"].strip().lower() == worker_name.strip().lower()),
+            None
+        )
+        
+        profile_photo_bytes = None
+        profile_photo_mime = "image/jpeg"
+        
+        if employee and employee.get("photo_url"):
+            filename = os.path.basename(employee["photo_url"])
+            photo_path = STATIC_DIR / "profiles" / filename
+            if photo_path.exists():
+                try:
+                    with open(photo_path, "rb") as f:
+                        profile_photo_bytes = f.read()
+                    if filename.endswith(".png"):
+                        profile_photo_mime = "image/png"
+                except Exception as e:
+                    print("Error reading profile photo:", e)
+
         if not self.enabled:
             return self._demo_analysis(
                 worker_name=worker_name,
@@ -147,6 +116,7 @@ class GeminiVerifier:
                 longitude=longitude,
                 note=note,
                 photo=photo,
+                has_profile_photo=(profile_photo_bytes is not None)
             )
 
         try:
@@ -159,8 +129,11 @@ class GeminiVerifier:
                 longitude=longitude,
                 note=note,
                 photo=photo,
+                profile_photo_bytes=profile_photo_bytes,
+                profile_photo_mime=profile_photo_mime
             )
-        except Exception:
+        except Exception as e:
+            print("Error in Gemini analysis:", e)
             return self._demo_analysis(
                 worker_name=worker_name,
                 facility_name=facility_name,
@@ -170,6 +143,7 @@ class GeminiVerifier:
                 longitude=longitude,
                 note=note,
                 photo=photo,
+                has_profile_photo=(profile_photo_bytes is not None)
             )
 
     async def _gemini_analysis(
@@ -183,27 +157,59 @@ class GeminiVerifier:
         longitude: float | None,
         note: str,
         photo: UploadFile | None,
+        profile_photo_bytes: bytes | None = None,
+        profile_photo_mime: str = "image/jpeg"
     ) -> dict[str, Any]:
         import urllib.request
 
+        prompt = (
+            "You verify attendance for rural health workers. Return only JSON with keys: "
+            "verification_status, confidence, risk_score, ai_result, roster_suggestion, "
+            "alert_level, alert_title, alert_detail, translated_note.\n\n"
+            "Constraints for keys:\n"
+            "1. 'verification_status': Must be exactly one of: 'verified', 'review', or 'flagged'. "
+            "(Use 'flagged' for clear mismatches, identity errors, or suspicious events; 'review' for minor discrepancies; 'verified' for normal approvals).\n"
+            "2. 'confidence': A float between 0.0 and 1.0 representing how confident you are in your verification.\n"
+            "3. 'risk_score': An integer between 0 and 100. Clear mismatches, missing proof, or spoofing should have high risk (e.g., 75-100). Verified events should have low risk (e.g., 0-15).\n"
+            "4. 'roster_suggestion': Suggest a concrete action (e.g., 'Escalate to supervisor', 'Require manual approval', 'No action needed'). Must not be empty.\n"
+            "5. 'translated_note': If the worker note is not in English, translate it to English. If in English, keep as-is. If empty, set to ''.\n\n"
+        )
+        
+        if profile_photo_bytes is not None:
+            prompt += (
+                "IMPORTANT: You are provided with two images. "
+                "Image 1 (first image) is the worker's registered profile photo. "
+                "Image 2 (second image) is the newly captured check-in photo. "
+                "Compare the face in Image 2 with the face in Image 1. If they do not show the exact same person, "
+                "set 'verification_status' to 'flagged', 'risk_score' to 95, 'ai_result' to 'face_mismatch', "
+                "and populate 'alert_level' as 'high', 'alert_title' as 'Identity Mismatch', "
+                "and 'alert_detail' explaining that the face in the check-in does not match their profile.\n\n"
+            )
+        else:
+            prompt += (
+                "Note: No registered profile photo exists for this worker yet. Verify the check-in photo "
+                "based on context (e.g. backdrop, face visibility, location details).\n\n"
+            )
+
+        prompt += (
+            f"Worker: {worker_name}. Facility: {facility_name}. Event: {event_type}. "
+            f"Event time: {event_time}. Latitude: {latitude}. Longitude: {longitude}. "
+            f"Optional note: {note}."
+        )
+
         payload_parts: list[dict[str, Any]] = [
-            {
-                "text": (
-                    "You verify attendance for rural health workers. Return only JSON with keys: "
-                    "verification_status, confidence, risk_score, ai_result, roster_suggestion, "
-                    "alert_level, alert_title, alert_detail, translated_note.\n\n"
-                    "Constraints for keys:\n"
-                    "1. 'verification_status': Must be exactly one of: 'verified', 'review', or 'flagged'. (Use 'flagged' for clear mismatches, identity errors, or suspicious events; 'review' for minor discrepancies; 'verified' for normal approvals).\n"
-                    "2. 'confidence': A float between 0.0 and 1.0 representing how confident you are in your verification.\n"
-                    "3. 'risk_score': An integer between 0 and 100. Clear mismatches, missing proof, or spoofing should have high risk (e.g., 75-100). Verified events should have low risk (e.g., 0-15).\n"
-                    "4. 'roster_suggestion': Suggest a concrete action (e.g., 'Escalate to supervisor', 'Require manual approval', 'No action needed'). Must not be empty.\n"
-                    "5. 'translated_note': If the worker note is not in English, translate it to English. If in English, keep as-is. If empty, set to ''.\n\n"
-                    f"Worker: {worker_name}. Facility: {facility_name}. Event: {event_type}. "
-                    f"Event time: {event_time}. Latitude: {latitude}. Longitude: {longitude}. "
-                    f"Optional note: {note}."
-                )
-            }
+            {"text": prompt}
         ]
+
+        if profile_photo_bytes is not None:
+            payload_parts.append(
+                {
+                    "inlineData": {
+                        "mimeType": profile_photo_mime,
+                        "data": base64.b64encode(profile_photo_bytes).decode("utf-8"),
+                    }
+                }
+            )
 
         if photo is not None:
             photo_bytes = await photo.read()
@@ -243,7 +249,6 @@ class GeminiVerifier:
         )
         parsed = json.loads(raw_text)
         
-        # Defensively sanitize status to match expected system categories
         status = parsed.get("verification_status", "review").lower()
         if status not in ["verified", "review", "flagged"]:
             status = "flagged" if status in ["rejected", "failed", "invalid", "spoof"] else "review"
@@ -290,10 +295,12 @@ class GeminiVerifier:
         longitude: float | None,
         note: str,
         photo: UploadFile | None,
+        has_profile_photo: bool = False
     ) -> dict[str, Any]:
         photo_uploaded = photo is not None and bool(photo.filename)
         note_lower = note.lower()
         spoof_words = any(word in note_lower for word in ["home", "fake", "proxy", "spoof"])
+        face_mismatch = "mismatch" in note_lower or "mismatch" in worker_name.lower()
         parsed_time = datetime.fromisoformat(event_time.replace("Z", "+00:00"))
         local_hour = parsed_time.hour
 
@@ -325,7 +332,19 @@ class GeminiVerifier:
             confidence -= 0.28
             risk_score += 34
 
-        if photo_uploaded and not spoof_words and confidence >= 0.82:
+        if face_mismatch:
+            status = "flagged"
+            confidence = 0.99
+            risk_score = 95
+            ai_result = "face_mismatch"
+            roster_suggestion = "Hold shift payout and escalate to supervisor."
+            alert = {
+                "level": "high",
+                "title": "Verification Failed: Identity Mismatch",
+                "detail": f"The person in the check-in photo does not match the registered profile of {worker_name}.",
+                "recommendation": roster_suggestion,
+            }
+        elif photo_uploaded and not spoof_words and confidence >= 0.82:
             status = "verified"
             alert = None
             ai_result = (
@@ -352,10 +371,8 @@ class GeminiVerifier:
             )
             roster_suggestion = "Review this event with the worker before final approval."
 
-        # Simple non-ASCII check to mock regional language detection in demo mode
         translated_note = note
         if any(ord(char) > 127 for char in note):
-            # It's likely a regional language text (e.g. Hindi, Spanish, etc.)
             if "रास्ता" in note or "road" in note_lower or "kharab" in note_lower:
                 translated_note = "The road is bad/blocked (Demo Translation)"
             elif "tabiyat" in note_lower or "bimar" in note_lower or "ill" in note_lower:
@@ -439,7 +456,6 @@ class GeminiVerifier:
             return self._demo_transcribe()
 
     def _demo_transcribe(self) -> dict[str, str]:
-        # Return a simulated transcription for testing when Gemini is offline or disabled
         return {
             "transcription": "रास्ता बंद है",
             "translation": "The road is blocked"
@@ -476,7 +492,7 @@ async def supervisor() -> FileResponse:
 
 @app.get("/api/dashboard")
 async def dashboard() -> JSONResponse:
-    records = [asdict(item) for item in store.list()]
+    records = db.load_records()
     alerts = [record["alert"] for record in records if record["alert"]]
     metrics = {
         "total_events": len(records),
@@ -539,7 +555,12 @@ async def create_check_in(
         ),
         raw_signals=analysis.get("raw_signals", {}),
     )
-    store.add(record)
+    
+    # Save to JSON persistent store
+    records = db.load_records()
+    records.insert(0, asdict(record))
+    db.save_records(records)
+    
     return JSONResponse({"record": asdict(record)})
 
 
@@ -549,6 +570,48 @@ async def transcribe_voice(
 ) -> JSONResponse:
     result = await verifier.transcribe_and_translate(audio)
     return JSONResponse(result)
+
+
+@app.get("/api/employees")
+async def get_employees() -> JSONResponse:
+    employees = db.load_employees()
+    return JSONResponse({"employees": employees})
+
+
+@app.post("/api/employees")
+async def create_employee(
+    name: str = Form(...),
+    facility_name: str = Form(...),
+    work_hours: str = Form(...),
+    photo: UploadFile = File(...),
+) -> JSONResponse:
+    employees = db.load_employees()
+    
+    employee_id = str(uuid4())
+    photo_filename = f"{employee_id}.jpg"
+    
+    profiles_dir = STATIC_DIR / "profiles"
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+    
+    photo_path = profiles_dir / photo_filename
+    photo_bytes = await photo.read()
+    with open(photo_path, "wb") as f:
+        f.write(photo_bytes)
+        
+    photo_url = f"/static/profiles/{photo_filename}"
+    
+    new_employee = {
+        "id": employee_id,
+        "name": name,
+        "facility_name": facility_name,
+        "photo_url": photo_url,
+        "work_hours": work_hours
+    }
+    
+    employees.insert(0, new_employee)
+    db.save_employees(employees)
+    
+    return JSONResponse({"employee": new_employee})
 
 
 @app.post("/api/demo/spoof")
@@ -579,5 +642,10 @@ async def seed_spoof_demo() -> JSONResponse:
         alert=alert,
         raw_signals={"provider": "demo", "seeded": True},
     )
-    store.add(record)
+    
+    # Save to persistent store
+    records = db.load_records()
+    records.insert(0, asdict(record))
+    db.save_records(records)
+    
     return JSONResponse({"record": asdict(record)})
